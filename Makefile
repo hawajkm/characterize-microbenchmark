@@ -1,5 +1,6 @@
 CC:=gcc
-OPTS:=-O1 -lstdc++ -ffast-math
+LINK:=-lm
+OPTS:=-O3
 
 # Directories
 BUILD_DIR := build
@@ -21,7 +22,7 @@ $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(I_OPTS) $(OPTS) -c $< -o $@
 
 build/main: $(O_FILES) | build
-	$(CC) $(O_FILES) -o build/main
+	$(CC) $(O_FILES) $(LINK) -o build/main
 
 build:
 	mkdir -p build
