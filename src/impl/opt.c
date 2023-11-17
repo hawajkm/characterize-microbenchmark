@@ -1,4 +1,17 @@
+/* opt.c
+ *
+ * Author:
+ * Date  :
+ *
+ *  Description
+ */
+
+/* Standard C includes */
 #include <stdlib.h>
+
+/* Include all required headers */
+#include "common/macros.h"
+#include "common/types.h"
 
 /* Alternative Implementation */
 #pragma GCC push_options
