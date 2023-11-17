@@ -10,6 +10,5 @@
 #define __COMMON_TYPES_H_
 
 typedef unsigned char byte;
-typedef unsigned long long uint64;
 
 #endif //__COMMON_TYPES_H_
