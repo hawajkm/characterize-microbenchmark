@@ -1,24 +1,54 @@
+/* naive.c
+ *
+ * Author: Khalid Al-Hawaj
+ * Date  : 12 Nov. 2023
+ *
+ * This file is structured to call different implementation of the same
+ * algorithm/microbenchmark. The file will allocate 3 output arrays one
+ * for: scalar naive impl, scalar opt impl, vectorized impl. As it stands
+ * the file will allocate and initialize with random data one input array
+ * of type 'byte'. To check correctness, the file allocate a 'ref' array;
+ * to calculate this 'ref' array, the file will invoke a ref_impl, which
+ * is supposed to be functionally correct and act as a reference for
+ * the functionality. The file also adds a guard word at the end of the
+ * output arrays to check for buffer overruns.
+ *
+ * The file will invoke each implementation n number of times. It will
+ * record the runtime of _each_ invocation through the following Linux
+ * API:
+ *    clock_gettime(), with the clk_id set to CLOCK_MONOTONIC
+ * Then, the file will calculate the standard deviation and calculate
+ * an outlier-free average by excluding runtimes that are larger than
+ * 2 standard deviation of the original average.
+ */
+
+/* Standard C includes  */
+/*  -> Standard Library */
 #include <stdio.h>
-#include <stdbool.h>
-#include <time.h>
 #include <stdlib.h>
-#include <stdint.h>
-#include <unistd.h>
 #include <math.h>
+/*  -> Types            */
+#include <stdbool.h>
+#include <inttypes.h>
+/*  -> Runtimes         */
+#include <time.h>
+#include <unistd.h>
 #include <errno.h>
 
 /* Include all implementations declarations */
+#include "impl/ref.h"
 #include "impl/naive.h"
 #include "impl/opt.h"
 
 /* Include macros.h */
-#include "tools/macros.h"
+#include "common/types.h"
+#include "common/macros.h"
 
 const int SIZE_DATA = 16 * 1024 * 1024;
 
 int main()
 {
-  // Set our priority the highest
+  /* Set our priority the highest */
   int nice_level = -20;
 
   printf("* Setting the niceness level:\n");
@@ -32,98 +62,60 @@ int main()
   printf("  Process has niceness level = %d\n", nice_level);
   printf("\n\n");
 
-  /* Datasets */
-  unsigned char *src, *dest0, *dest1;
-
-  /* Time keeping */
-  struct timespec ts;
-  struct timespec te;
-
-  /* Iterate and average runtimes */
-  unsigned int num_runs = 200;
-  unsigned long long* runtimes;
-
-  runtimes = (unsigned long long*)calloc(num_runs, sizeof(unsigned long long));
-
-  /* Constants for statistical analysis */
-  const unsigned int nstd = 2;
+  /* Statistics */
+  __DECLARE_STATS(200, 2);
 
   /* Initialize Rand */
   srand(0xdeadbeef);
 
-  /* Allocation */
-  src   = (unsigned char*)calloc(SIZE_DATA + 0, 1);
-  dest0 = (unsigned char*)calloc(SIZE_DATA + 4, 1);
-  dest1 = (unsigned char*)calloc(SIZE_DATA + 4, 1);
-
-  printf("Allocation data:\n");
-  printf("    src   address is %p\n", src  );
-  printf("    dest0 address is %p\n", dest0);
-  printf("    dest1 address is %p\n", dest1);
-  printf("\n");
-  printf("\n");
-
-  /* Generate data */
-  for(int i = 0; i < SIZE_DATA; i++) {
-    src[i] = rand() % 256;
-  }
+  /* Datasets */
+  /* Allocation and initialization */
+  byte* src   = __ALLOC_INIT_DATA(byte, SIZE_DATA + 0);
+  byte* ref   = __ALLOC_INIT_DATA(byte, SIZE_DATA + 4);
+  byte* dest0 = __ALLOC_DATA     (byte, SIZE_DATA + 4);
+  byte* dest1 = __ALLOC_DATA     (byte, SIZE_DATA + 4);
 
   /* Setting a guards, which is 0xdeadcafe.
      The guard should not change or be touched. */
-  dest0[SIZE_DATA + 0] = 0xfe;
-  dest0[SIZE_DATA + 1] = 0xca;
-  dest0[SIZE_DATA + 2] = 0xad;
-  dest0[SIZE_DATA + 3] = 0xde;
+  __SET_GUARD(ref  , SIZE_DATA);
+  __SET_GUARD(dest0, SIZE_DATA);
+  __SET_GUARD(dest1, SIZE_DATA);
 
-  dest1[SIZE_DATA + 0] = 0xfe;
-  dest1[SIZE_DATA + 1] = 0xca;
-  dest1[SIZE_DATA + 2] = 0xad;
-  dest1[SIZE_DATA + 3] = 0xde;
+  /* Generate ref data */
+  impl_ref(ref, src, SIZE_DATA);
 
-  /* Make sure all PTEs are created. */
+  /* Naive algorithm */
   printf("Running Scalar \"Naive\" implementation:\n");
-  printf("  * Warming up all PTEs .... ");
-  for(int i = 0; i < SIZE_DATA; i++) {
-    dest0[i] = 0x00;
-  }
-  printf("Finished\n");
 
-  /* Basic algorithm */
   printf("  * Invoking the implementation %d times .... ", num_runs);
   for (int i = 0; i < num_runs; i++) {
-    __COMPILER_FENCE_;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
-      printf("\n\n    ERROR: getting time failed!\n\n\n");
-      exit(-1);
-    }
+    __SET_START_TIME();
     impl_scalar_naive(dest0, src, SIZE_DATA);
-    if (clock_gettime(CLOCK_MONOTONIC, &te) != 0) {
-      printf("\n\n    ERROR: getting time failed!\n\n\n");
-      exit(-1);
-    }
-    __COMPILER_FENCE_;
+    __SET_END_TIME();
 
-    runtimes[i] = (te.tv_sec  - ts.tv_sec ) * 1e9 +
-                  (te.tv_nsec - ts.tv_nsec)       ;
+    runtimes[i] = __CALC_RUNTIME();
   }
   printf("Finished\n");
 
   /* Verfication */
-  bool naive_match = true;
-
-  naive_match = naive_match && (dest0[SIZE_DATA + 0] == 0xfe);
-  naive_match = naive_match && (dest0[SIZE_DATA + 1] == 0xca);
-  naive_match = naive_match && (dest0[SIZE_DATA + 2] == 0xad);
-  naive_match = naive_match && (dest0[SIZE_DATA + 3] == 0xde);
-
-  for(int i = 0; (i < SIZE_DATA) && naive_match; i++) {
-    naive_match = naive_match && (src[i] == dest0[i]);
+  printf("  * Verifying results .... ");
+  bool naive_match = __CHECK_MATCH(ref, dest0, SIZE_DATA);
+  bool naive_guard = __CHECK_GUARD(     dest0, SIZE_DATA);
+  if (naive_match && naive_guard) {
+    printf("Success\n");
+  } else if (!naive_match && naive_guard) {
+    printf("Fail, but no buffer overruns\n");
+  } else if (naive_match && !naive_guard) {
+    printf("Success, but failed buffer overruns check\n");
+  } else if(!naive_match && !naive_guard) {
+    printf("Failed, and failed buffer overruns check\n");
   }
 
   /* Running analytics */
-  unsigned long long naive_min = -1;
-  unsigned long long naive_max =  0;
-  unsigned long long naive_avg =  0;
+  /*   -> Calculate min, max, and avg */
+  uint64_t naive_min = -1;
+  uint64_t naive_max =  0;
+  uint64_t naive_avg =  0;
   for (int i = 0; i < num_runs; i++) {
     if (runtimes[i] < naive_min) {
       naive_min = runtimes[i];
@@ -135,14 +127,16 @@ int main()
   }
   naive_avg = naive_avg / num_runs;
 
-  unsigned long long naive_std =  0;
+  /*   -> Calculate standard deviation */
+  uint64_t naive_std =  0;
   for (int i = 0; i < num_runs; i++) {
     naive_std += (runtimes[i] - naive_avg) * (runtimes[i] - naive_avg);
   }
   naive_std = naive_std / num_runs;
 
-  unsigned long long naive_mean   = 0;
-  unsigned long long naive_mean_n = 0;
+  /*   -> Calculate outlier-free average (mean) */
+  uint64_t naive_mean   = 0;
+  uint64_t naive_mean_n = 0;
   for (int i = 0; i < num_runs; i++) {
     if (runtimes[i] > naive_avg) {
       if ((runtimes[i] - naive_avg) <= (nstd * naive_std)) {
@@ -157,52 +151,40 @@ int main()
     }
   }
   naive_mean = naive_mean / naive_mean_n;
-
-  /* Make sure all PTEs are created. */
   printf("\n");
+
+  /* Optimized algorithm */
   printf("Running Scalar \"Optimized\" implementation:\n");
-  printf("  * Warming up all PTEs .... ");
-  for(int i = 0; i < SIZE_DATA; i++) {
-    dest1[i] = 0x00;
-  }
-  printf("Finished\n");
 
   printf("  * Invoking the implementation %d times .... ", num_runs);
   for (int i = 0; i < num_runs; i++) {
-    __COMPILER_FENCE_;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1) {
-      printf("\n\n    ERROR: getting time failed!\n\n\n");
-      exit(-1);
-    }
+    __SET_START_TIME();
     impl_scalar_opt(dest1, src, SIZE_DATA);
-    if (clock_gettime(CLOCK_MONOTONIC, &te) == -1) {
-      printf("\n\n    ERROR: getting time failed!\n\n\n");
-      exit(-1);
-    }
-    __COMPILER_FENCE_;
+    __SET_END_TIME();
 
-    runtimes[i] = (te.tv_sec  - ts.tv_sec ) * 1e9 +
-                  (te.tv_nsec - ts.tv_nsec)       ;
+    runtimes[i] = __CALC_RUNTIME();
   }
   printf("Finished\n");
 
   /* Verification */
-  bool opt_match = true;
-
-  /* Guards */
-  opt_match = opt_match && (dest1[SIZE_DATA + 0] == 0xfe);
-  opt_match = opt_match && (dest1[SIZE_DATA + 1] == 0xca);
-  opt_match = opt_match && (dest1[SIZE_DATA + 2] == 0xad);
-  opt_match = opt_match && (dest1[SIZE_DATA + 3] == 0xde);
-
-  for(int i = 0; (i < SIZE_DATA) && opt_match; i++) {
-    opt_match = opt_match && (src[i] == dest1[i]);
+  printf("  * Verifying results .... ");
+  bool opt_match = __CHECK_MATCH(ref, dest1, SIZE_DATA);
+  bool opt_guard = __CHECK_GUARD(     dest1, SIZE_DATA);
+  if (opt_match && opt_guard) {
+    printf("Success\n");
+  } else if (!opt_match && opt_guard) {
+    printf("Fail, but no buffer overruns\n");
+  } else if (opt_match && !opt_guard) {
+    printf("Success, but failed buffer overruns check\n");
+  } else if(!opt_match && !opt_guard) {
+    printf("Failed, and failed buffer overruns check\n");
   }
 
   /* Running analytics */
-  unsigned long long opt_min = -1;
-  unsigned long long opt_max =  0;
-  unsigned long long opt_avg =  0;
+  /*   -> Calculate min, max, and avg */
+  uint64_t opt_min = -1;
+  uint64_t opt_max =  0;
+  uint64_t opt_avg =  0;
   for (int i = 0; i < num_runs; i++) {
     if (runtimes[i] < opt_min) {
       opt_min = runtimes[i];
@@ -214,14 +196,16 @@ int main()
   }
   opt_avg = opt_avg / num_runs;
 
-  unsigned long long opt_std =  0;
+  /*   -> Calculate standard deviation */
+  uint64_t opt_std =  0;
   for (int i = 0; i < num_runs; i++) {
     opt_std += (runtimes[i] - opt_avg) * (runtimes[i] - opt_avg);
   }
   opt_std = sqrt(opt_std / num_runs);
 
-  unsigned long long opt_mean   = 0;
-  unsigned long long opt_mean_n = 0;
+  /*   -> Calculate outlier-free average (mean) */
+  uint64_t opt_mean   = 0;
+  uint64_t opt_mean_n = 0;
   for (int i = 0; i < num_runs; i++) {
     if (runtimes[i] > opt_avg) {
       if ((runtimes[i] - opt_avg) <= (nstd * opt_std)) {
@@ -240,8 +224,10 @@ int main()
   /* Display information */
   printf("\n\n");
   printf("Runtimes:\n");
-  printf("  * Basic scalar (%s): %lld ns\n", __PRINT_MATCH(naive_match), naive_mean);
-  printf("  * Opt   scalar (%s): %lld ns\n", __PRINT_MATCH(opt_match)  , opt_mean  );
+  printf("  * Basic scalar (%s):", __PRINT_MATCH(naive_match));
+  printf(" %" PRIu64 " ns\n"     , naive_mean                );
+  printf("  * Opt   scalar (%s):", __PRINT_MATCH(opt_match)  );
+  printf(" %" PRIu64 " ns\n"     , opt_mean                  );
   printf("\n");
   printf("      -> Speedup = %.2fx\n", ((naive_mean * 1.0f) / opt_mean));
   printf("\n");
