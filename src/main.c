@@ -224,9 +224,9 @@ int main()
   /* Display information */
   printf("\n\n");
   printf("Runtimes:\n");
-  printf("  * Basic scalar (%s):", __PRINT_MATCH(naive_match));
+  printf("  * Native    scalar (%s):", __PRINT_MATCH(naive_match));
   printf(" %" PRIu64 " ns\n"     , naive_mean                );
-  printf("  * Opt   scalar (%s):", __PRINT_MATCH(opt_match)  );
+  printf("  * Optimized scalar (%s):", __PRINT_MATCH(opt_match)  );
   printf(" %" PRIu64 " ns\n"     , opt_mean                  );
   printf("\n");
   printf("      -> Speedup = %.2fx\n", ((naive_mean * 1.0f) / opt_mean));
