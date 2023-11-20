@@ -16,15 +16,35 @@
 #define __PRINT_MATCH(x) (x ? "   MATCH" : "NO MATCH")
 
 /* Testing and Statistics Macros */
-#define __ALLOC_DATA(type, num_elems) ({               \
-  type* temp = (type*)calloc(num_elems, sizeof(type)); \
+#define __ALLOC_DATA(type, nelems) ({                  \
+  type* temp = (type*)aligned_alloc(512 / 8,           \
+                              nelems * sizeof(type));  \
+                                                       \
+  if (temp == NULL) {                                  \
+    printf("\n");                                      \
+    printf("  ERROR: Cannot allocate memory!");        \
+    printf("\n");                                      \
+    printf("\n");                                      \
+    exit(-2);                                          \
+  }                                                    \
+                                                       \
   temp;                                                \
 })
 
-#define __ALLOC_INIT_DATA(type, num_elems) ({          \
-  type* temp = (type*)calloc(num_elems, sizeof(type)); \
+#define __ALLOC_INIT_DATA(type, nelems) ({             \
+  type* temp = (type*)aligned_alloc(512 / 8,           \
+                              nelems * sizeof(type));  \
+                                                       \
+  if (temp == NULL) {                                  \
+    printf("\n");                                      \
+    printf("  ERROR: Cannot allocate memory!");        \
+    printf("\n");                                      \
+    printf("\n");                                      \
+    exit(-2);                                          \
+  }                                                    \
+                                                       \
   /* Generate data */                                  \
-  for(int i = 0; i < num_elems; i++) {                 \
+  for(int i = 0; i < nelems; i++) {                    \
     temp[i] = rand() % (0x1llu << (sizeof(type) * 8)); \
   }                                                    \
   temp;                                                \
@@ -66,12 +86,20 @@
   /* Iterate and average runtimes */                   \
   uint32_t num_runs = _num_runs;                       \
   uint64_t* runtimes;                                  \
+  bool* runtimes_mask;                                 \
                                                        \
   runtimes = (uint64_t*)calloc(num_runs,               \
                                  sizeof(uint64_t));    \
                                                        \
+  runtimes_mask = (bool*)calloc(num_runs,              \
+                                     sizeof(bool));    \
+                                                       \
   /* Constants for statistical analysis */             \
   const unsigned int nstd = _num_stdev;
+
+#define __DESTROY_STATS()                              \
+  free(runtimes);                                      \
+  free(runtimes_mask);
 
 #define __SET_START_TIME() {                           \
   __COMPILER_FENCE_;                                   \
