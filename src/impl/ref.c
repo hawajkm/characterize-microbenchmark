@@ -14,6 +14,6 @@
 #include "common/types.h"
 
 /* Reference Implementation */
-void* impl_ref(void* dest, const void* src, size_t size)
+void* impl_ref(void* args)
 {
 }

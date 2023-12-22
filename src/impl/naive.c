@@ -16,7 +16,7 @@
 /* Naive Implementation */
 #pragma GCC push_options
 #pragma GCC optimize ("O1")
-void* impl_scalar_naive(void* dest, const void* src, size_t size)
+void* impl_scalar_naive(void* args)
 {
 }
 #pragma GCC pop_options

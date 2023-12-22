@@ -10,6 +10,6 @@
 #define __IMPL_REF_H_
 
 /* Function declaration */
-void* impl_ref(void* dest, const void* src, size_t size);
+void* impl_ref(void* args);
 
 #endif //__IMPL_REF_H_
