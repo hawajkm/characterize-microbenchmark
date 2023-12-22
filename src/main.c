@@ -56,7 +56,8 @@ const int SIZE_DATA = 4 * 1024 * 1024;
 int main(int argc, char** argv)
 {
   /* Arguments */
-  int nthreads = 16;
+  int nthreads = 1;
+  int cpu      = 0;
 
   /* Parse arguments */
   /* Function pointers */
@@ -92,6 +93,13 @@ int main(int argc, char** argv)
     if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--nthreads") == 0) {
       assert (++i < argc);
       nthreads = atoi(argv[i]);
+
+      continue;
+    }
+
+    if (strcmp(argv[i], "-c") == 0 || strcmp(argv[i], "--cpu") == 0) {
+      assert (++i < argc);
+      cpu = atoi(argv[i]);
 
       continue;
     }
@@ -155,7 +163,9 @@ int main(int argc, char** argv)
   cpu_set_t cpumask;
 
   CPU_ZERO(&cpumask);
-  CPU_SET(6, &cpumask);
+  for (int i = 0; i < nthreads; i++) {
+    CPU_SET(cpu + i, &cpumask);
+  }
 
   res = sched_setaffinity(pid, sizeof(cpumask), &cpumask);
 
@@ -187,9 +197,12 @@ int main(int argc, char** argv)
   /* Arguments for the functions */
   args_t args_ref;
 
-  args_ref.input  = src;
-  args_ref.output = ref;
-  args_ref.size   = SIZE_DATA;
+  args_ref.size     = SIZE_DATA;
+  args_ref.input    = src;
+  args_ref.output   = ref;
+
+  args_ref.cpu      = cpu;
+  args_ref.nthreads = nthreads;
 
   /* Running the reference function */
   impl_ref(&args_ref);
@@ -198,9 +211,12 @@ int main(int argc, char** argv)
   /* Arguments for the function */
   args_t args;
 
-  args.input  = src;
-  args.output = dest;
-  args.size   = SIZE_DATA;
+  args.size     = SIZE_DATA;
+  args.input    = src;
+  args.output   = dest;
+
+  args.cpu      = cpu;
+  args.nthreads = nthreads;
 
   /* Start execution */
   printf("Running Scalar \"%s\" implementation:\n", impl_str);
