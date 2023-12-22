@@ -27,9 +27,11 @@
 
 /* Standard C includes  */
 /*  -> Standard Library */
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <string.h>
 /*  -> Scheduling       */
 #include <sched.h>
 /*  -> Types            */
@@ -51,8 +53,75 @@
 
 const int SIZE_DATA = 4 * 1024 * 1024;
 
-int main()
+int main(int argc, char** argv)
 {
+  /* Arguments */
+  int nthreads = 16;
+
+  /* Parse arguments */
+  /* Function pointers */
+  void* (*impl_scalar_naive_ptr)(void* args) = impl_scalar_naive;
+  void* (*impl_scalar_opt_ptr  )(void* args) = impl_scalar_opt;
+  void* (*impl_vector          )(void* args) = impl_vector;
+  void* (*impl_parallel        )(void* args) = impl_parallel;
+
+  /* Chosen */
+  void* (*impl)(void* args) = NULL;
+  const char* impl_str      = NULL;
+
+  bool help = false;
+  for (int i = 1; i < argc; i++) {
+    if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "-impl") == 0) {
+      assert (++i < argc);
+      if (strcmp(argv[i], "naive") == 0) {
+        impl = impl_scalar_naive; impl_str = "scalar_naive";
+      } else if (strcmp(argv[i], "opt"  ) == 0) {
+        impl = impl_scalar_opt  ; impl_str = "scalar_opt"  ;
+      } else if (strcmp(argv[i], "vec"  ) == 0) {
+        impl = impl_vector      ; impl_str = "vectorized"  ;
+      } else if (strcmp(argv[i], "para" ) == 0) {
+        impl = impl_parallel    ; impl_str = "parallelized";
+      } else {
+        impl = NULL             ; impl_str = "unknown"     ;
+      }
+
+      continue;
+    }
+
+    /* Parallelization */
+    if (strcmp(argv[i], "-n") == 0 || strcmp(argv[i], "--nthreads") == 0) {
+      assert (++i < argc);
+      nthreads = atoi(argv[i]);
+
+      continue;
+    }
+
+    /* Help */
+    if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0) {
+      help = true;
+
+      continue;
+    }
+  }
+
+  if (help || impl == NULL) {
+    if (!help) {
+      printf("\n");
+      printf("ERROR: No implementation was chosen.\n");
+    }
+    printf("\n");
+    printf("Usage:\n");
+    printf("  %s -impl i [-nthreads n]\n", argv[0]);
+    printf("\n");
+    printf("Options:\n");
+    printf("  -h | --help      Print this message.\n");
+    printf("  -i | --impl      Available implementations = {naive, opt, vec, para}.\n");
+    printf("  -n | --nthreads  Set number of threads available. Default = %d\n", nthreads);
+    printf("\n");
+
+    exit(help? 0 : 1);
+  }
+
   /* Set our priority the highest */
   int nice_level = -20;
 
@@ -107,267 +176,170 @@ int main()
   /* Allocation and initialization */
   byte* src   = __ALLOC_INIT_DATA(byte, SIZE_DATA + 0);
   byte* ref   = __ALLOC_INIT_DATA(byte, SIZE_DATA + 4);
-  byte* dest0 = __ALLOC_DATA     (byte, SIZE_DATA + 4);
-  byte* dest1 = __ALLOC_DATA     (byte, SIZE_DATA + 4);
+  byte* dest  = __ALLOC_DATA     (byte, SIZE_DATA + 4);
 
   /* Setting a guards, which is 0xdeadcafe.
      The guard should not change or be touched. */
-  __SET_GUARD(ref  , SIZE_DATA);
-  __SET_GUARD(dest0, SIZE_DATA);
-  __SET_GUARD(dest1, SIZE_DATA);
+  __SET_GUARD(ref , SIZE_DATA);
+  __SET_GUARD(dest, SIZE_DATA);
 
   /* Generate ref data */
-  impl_ref(ref, src, SIZE_DATA);
+  /* Arguments for the functions */
+  args_t args_ref;
 
-  /* Naive algorithm */
-  printf("Running Scalar \"Naive\" implementation:\n");
+  args_ref.input  = src;
+  args_ref.output = ref;
+  args_ref.size   = SIZE_DATA;
+
+  /* Running the reference function */
+  impl_ref(&args_ref);
+
+  /* Execute the requested implementation */
+  /* Arguments for the function */
+  args_t args;
+
+  args.input  = src;
+  args.output = dest;
+  args.size   = SIZE_DATA;
+
+  /* Start execution */
+  printf("Running Scalar \"%s\" implementation:\n", impl_str);
 
   printf("  * Invoking the implementation %d times .... ", num_runs);
   for (int i = 0; i < num_runs; i++) {
     __SET_START_TIME();
     for (int j = 0; j < 16; j++) {
-      impl_scalar_naive(dest0, src, SIZE_DATA);
+      impl_scalar_naive(&args);
     }
     __SET_END_TIME();
     runtimes[i] = __CALC_RUNTIME() / 16;
   }
   printf("Finished\n");
-
-  /* Dump */
-  FILE * fp_naive;
-  fp_naive = fopen("naive_runtimes.csv", "w");
-
-  for (int i = 0; i < num_runs; i++) {
-    if (i != 0) fprintf(fp_naive, ", ");
-    fprintf(fp_naive, "%d", runtimes[i]);
-  }
-
-  fclose(fp_naive);
 
   /* Verfication */
   printf("  * Verifying results .... ");
-  bool naive_match = __CHECK_MATCH(ref, dest0, SIZE_DATA);
-  bool naive_guard = __CHECK_GUARD(     dest0, SIZE_DATA);
-  if (naive_match && naive_guard) {
+  bool match = __CHECK_MATCH(ref, dest, SIZE_DATA);
+  bool guard = __CHECK_GUARD(     dest, SIZE_DATA);
+  if (match && guard) {
     printf("Success\n");
-  } else if (!naive_match && naive_guard) {
+  } else if (!match && guard) {
     printf("Fail, but no buffer overruns\n");
-  } else if (naive_match && !naive_guard) {
+  } else if (match && !guard) {
     printf("Success, but failed buffer overruns check\n");
-  } else if(!naive_match && !naive_guard) {
+  } else if(!match && !guard) {
     printf("Failed, and failed buffer overruns check\n");
   }
 
   /* Running analytics */
-  uint64_t naive_min     = -1;
-  uint64_t naive_max     =  0;
+  uint64_t min     = -1;
+  uint64_t max     =  0;
 
-  uint64_t naive_avg     =  0;
-  uint64_t naive_avg_n   =  0;
+  uint64_t avg     =  0;
+  uint64_t avg_n   =  0;
 
-  uint64_t naive_std     =  0;
-  uint64_t naive_std_n   =  0;
+  uint64_t std     =  0;
+  uint64_t std_n   =  0;
 
-  int      naive_n_msked =  0;
-  int      naive_n_stats =  0;
+  int      n_msked =  0;
+  int      n_stats =  0;
 
   for (int i = 0; i < num_runs; i++)
     runtimes_mask[i] = true;
 
   printf("  * Running statistics:\n");
   do {
-    naive_n_stats++;
-    printf("    + Starting statistics run number #%d:\n", naive_n_stats);
-    naive_avg_n =  0;
-    naive_avg   =  0;
+    n_stats++;
+    printf("    + Starting statistics run number #%d:\n", n_stats);
+    avg_n =  0;
+    avg   =  0;
 
     /*   -> Calculate min, max, and avg */
     for (int i = 0; i < num_runs; i++) {
       if (runtimes_mask[i]) {
-        if (runtimes[i] < naive_min) {
-          naive_min = runtimes[i];
+        if (runtimes[i] < min) {
+          min = runtimes[i];
         }
-        if (runtimes[i] > naive_max) {
-          naive_max = runtimes[i];
+        if (runtimes[i] > max) {
+          max = runtimes[i];
         }
-        naive_avg += runtimes[i];
-        naive_avg_n += 1;
+        avg += runtimes[i];
+        avg_n += 1;
       }
     }
-    naive_avg = naive_avg / naive_avg_n;
+    avg = avg / avg_n;
 
     /*   -> Calculate standard deviation */
-    naive_std   =  0;
-    naive_std_n =  0;
+    std   =  0;
+    std_n =  0;
 
     for (int i = 0; i < num_runs; i++) {
       if (runtimes_mask[i]) {
-        naive_std   += ((runtimes[i] - naive_avg) *
-                        (runtimes[i] - naive_avg));
-        naive_std_n += 1;
+        std   += ((runtimes[i] - avg) *
+                  (runtimes[i] - avg));
+        std_n += 1;
       }
     }
-    naive_std = sqrt(naive_std / naive_std_n);
+    std = sqrt(std / std_n);
 
     /*   -> Calculate outlier-free average (mean) */
-    naive_n_msked = 0;
+    n_msked = 0;
     for (int i = 0; i < num_runs; i++) {
       if (runtimes_mask[i]) {
-        if (runtimes[i] > naive_avg) {
-          if ((runtimes[i] - naive_avg) > (nstd * naive_std)) {
+        if (runtimes[i] > avg) {
+          if ((runtimes[i] - avg) > (nstd * std)) {
             runtimes_mask[i] = false;
-            naive_n_msked += 1;
+            n_msked += 1;
           }
         } else {
-          if ((naive_avg - runtimes[i]) > (nstd * naive_std)) {
+          if ((avg - runtimes[i]) > (nstd * std)) {
             runtimes_mask[i] = false;
-            naive_n_msked += 1;
+            n_msked += 1;
           }
         }
       }
     }
 
-    printf("      - Standard deviation = %" PRIu64 "\n", naive_std);
-    printf("      - Average = %" PRIu64 "\n", naive_avg);
-    printf("      - Number of active elements = %d\n", naive_avg_n);
-    printf("      - Number of masked-off = %d\n", naive_n_msked);
-  } while (naive_n_msked > 0);
+    printf("      - Standard deviation = %" PRIu64 "\n", std);
+    printf("      - Average = %" PRIu64 "\n", avg);
+    printf("      - Number of active elements = %d\n", avg_n);
+    printf("      - Number of masked-off = %d\n", n_msked);
+  } while (n_msked > 0);
+  /* Display information */
+  printf("  * Runtimes (%s): "  , __PRINT_MATCH(match));
+  printf(" %" PRIu64 " ns\n", avg                 );
   printf("\n");
-
-  /* Optimized algorithm */
-  printf("Running Scalar \"Optimized\" implementation:\n");
-
-  printf("  * Invoking the implementation %d times .... ", num_runs);
-  sched_yield();
-  for (int i = 0; i < num_runs; i++) {
-    __SET_START_TIME();
-    for (int j = 0; j < 16; j++) {
-      impl_scalar_opt(dest1, src, SIZE_DATA);
-    }
-    __SET_END_TIME();
-    runtimes[i] = __CALC_RUNTIME() / 16;
-  }
-  printf("Finished\n");
 
   /* Dump */
-  FILE * fp_opt;
-  fp_opt = fopen("opt_runtimes.csv", "w");
+  FILE * fp;
+  char filename[256];
+  strcpy(filename, impl_str);
+  strcat(filename, "_runtimes.csv");
+  fp = fopen(filename, "w");
 
+  fprintf(fp, "impl,%s", impl_str);
+
+  fprintf(fp, "\n");
+  fprintf(fp, "num_of_runs,%d", num_runs);
+
+  fprintf(fp, "\n");
+  fprintf(fp, "runtimes");
   for (int i = 0; i < num_runs; i++) {
-    if (i != 0) fprintf(fp_opt, ", ");
-    fprintf(fp_opt, "%d", runtimes[i]);
+    fprintf(fp, ", ");
+    fprintf(fp, "%d", runtimes[i]);
   }
 
-  fclose(fp_opt);
-
-  /* Verification */
-  printf("  * Verifying results .... ");
-  bool opt_match = __CHECK_MATCH(ref, dest1, SIZE_DATA);
-  bool opt_guard = __CHECK_GUARD(     dest1, SIZE_DATA);
-  if (opt_match && opt_guard) {
-    printf("Success\n");
-  } else if (!opt_match && opt_guard) {
-    printf("Fail, but no buffer overruns\n");
-  } else if (opt_match && !opt_guard) {
-    printf("Success, but failed buffer overruns check\n");
-  } else if(!opt_match && !opt_guard) {
-    printf("Failed, and failed buffer overruns check\n");
-  }
-
-  /* Running analytics */
-  uint64_t opt_min     = -1;
-  uint64_t opt_max     =  0;
-
-  uint64_t opt_avg     =  0;
-  uint64_t opt_avg_n   =  0;
-
-  uint64_t opt_std     =  0;
-  uint64_t opt_std_n   =  0;
-
-  int      opt_n_msked =  0;
-  int      opt_n_stats =  0;
-
-  for (int i = 0; i < num_runs; i++)
-    runtimes_mask[i] = true;
-
-  printf("  * Running statistics:\n");
-  do {
-    opt_n_stats++;
-    printf("    + Starting statistics run number #%d:\n", opt_n_stats);
-    opt_avg_n =  0;
-    opt_avg   =  0;
-
-    /*   -> Calculate min, max, and avg */
-    for (int i = 0; i < num_runs; i++) {
-      if (runtimes_mask[i]) {
-        if (runtimes[i] < opt_min) {
-          opt_min = runtimes[i];
-        }
-        if (runtimes[i] > opt_max) {
-          opt_max = runtimes[i];
-        }
-        opt_avg += runtimes[i];
-        opt_avg_n += 1;
-      }
-    }
-    opt_avg = opt_avg / opt_avg_n;
-
-    /*   -> Calculate standard deviation */
-    opt_std   =  0;
-    opt_std_n =  0;
-
-    for (int i = 0; i < num_runs; i++) {
-      if (runtimes_mask[i]) {
-        opt_std   += ((runtimes[i] - opt_avg) *
-                        (runtimes[i] - opt_avg));
-        opt_std_n += 1;
-      }
-    }
-    opt_std = sqrt(opt_std / opt_std_n);
-
-    /*   -> Calculate outlier-free average (mean) */
-    opt_n_msked = 0;
-    for (int i = 0; i < num_runs; i++) {
-      if (runtimes_mask[i]) {
-        if (runtimes[i] > opt_avg) {
-          if ((runtimes[i] - opt_avg) > (nstd * opt_std)) {
-            runtimes_mask[i] = false;
-            opt_n_msked += 1;
-          }
-        } else {
-          if ((opt_avg - runtimes[i]) > (nstd * opt_std)) {
-            runtimes_mask[i] = false;
-            opt_n_msked += 1;
-          }
-        }
-      }
-    }
-
-    printf("      - Standard deviation = %" PRIu64 "\n", opt_std);
-    printf("      - Average = %" PRIu64 "\n", opt_avg);
-    printf("      - Number of active elements = %d\n", opt_avg_n);
-    printf("      - Number of masked-off = %d\n", opt_n_msked);
-  } while (opt_n_msked > 0);
-  printf("\n");
+  fprintf(fp, "\n");
+  fprintf(fp, "avg,%" PRIu64 "", avg);
+  fclose(fp);
 
   /* Manage memory */
   free(src);
-  free(dest0);
-  free(dest1);
+  free(dest);
   free(ref);
 
   /* Finished with statistics */
   __DESTROY_STATS();
 
-  /* Display information */
-  printf("Runtimes:\n");
-  printf("  * Naive      scalar (%s):", __PRINT_MATCH(naive_match));
-  printf(" %" PRIu64 " ns\n"          , naive_avg                 );
-  printf("  * Optimized  scalar (%s):", __PRINT_MATCH(opt_match)  );
-  printf(" %" PRIu64 " ns\n"          , opt_avg                   );
-  printf("\n");
-  printf("      -> Optimized  speedup = %.2fx\n", ((naive_avg * 1.0f) / opt_avg));
-  printf("\n");
-
+  /* Done */
   return 0;
 }
