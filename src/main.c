@@ -125,6 +125,7 @@ int main(int argc, char** argv)
     printf("  -h | --help      Print this message.\n");
     printf("  -i | --impl      Available implementations = {naive, opt, vec, para}.\n");
     printf("  -n | --nthreads  Set number of threads available. Default = %d\n", nthreads);
+    printf("  -c | --cpu       Set the main CPU for the program. Default = %d\n", cpu);
     printf("\n");
 
     exit(help? 0 : 1);
