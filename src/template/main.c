@@ -62,6 +62,12 @@ int main(int argc, char** argv)
   int nthreads = 1;
   int cpu      = 0;
 
+  int nruns    = 10000;
+  int nstdevs  = 3;
+
+  /* Data */
+  int data_size = SIZE_DATA;
+
   /* Parse arguments */
   /* Function pointers */
   void* (*impl_scalar_naive_ptr)(void* args) = impl_scalar_naive;
@@ -75,6 +81,7 @@ int main(int argc, char** argv)
 
   bool help = false;
   for (int i = 1; i < argc; i++) {
+    /* Implementations */
     if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--impl") == 0) {
       assert (++i < argc);
       if (strcmp(argv[i], "naive") == 0) {
@@ -88,6 +95,29 @@ int main(int argc, char** argv)
       } else {
         impl = NULL             ; impl_str = "unknown"     ;
       }
+
+      continue;
+    }
+
+    /* Input/output data size */
+    if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
+      assert (++i < argc);
+      data_size = atoi(argv[i]);
+
+      continue;
+    }
+
+    /* Run parameterization */
+    if (strcmp(argv[i], "--nruns") == 0) {
+      assert (++i < argc);
+      nruns = atoi(argv[i]);
+
+      continue;
+    }
+
+    if (strcmp(argv[i], "--nstdevs") == 0) {
+      assert (++i < argc);
+      nstdevs = atoi(argv[i]);
 
       continue;
     }
@@ -131,6 +161,9 @@ int main(int argc, char** argv)
     printf("    -h | --help      Print this message\n");
     printf("    -n | --nthreads  Set number of threads available (default = %d)\n", nthreads);
     printf("    -c | --cpu       Set the main CPU for the program (default = %d)\n", cpu);
+    printf("    -s | --size      Size of input and output data (default = %d)\n", data_size);
+    printf("         --nruns     Number of runs to the implementation (default = %d)\n", nruns);
+    printf("         --stdevs    Number of standard deviation to exclude outliers (default = %d)\n", nstdevs);
     printf("\n");
 
     exit(help? 0 : 1);
@@ -183,27 +216,27 @@ int main(int argc, char** argv)
   printf("\n");
 
   /* Statistics */
-  __DECLARE_STATS(1024, 3);
+  __DECLARE_STATS(nruns, nstdevs);
 
   /* Initialize Rand */
   srand(0xdeadbeef);
 
   /* Datasets */
   /* Allocation and initialization */
-  byte* src   = __ALLOC_INIT_DATA(byte, SIZE_DATA + 0);
-  byte* ref   = __ALLOC_INIT_DATA(byte, SIZE_DATA + 4);
-  byte* dest  = __ALLOC_DATA     (byte, SIZE_DATA + 4);
+  byte* src   = __ALLOC_INIT_DATA(byte, data_size + 0);
+  byte* ref   = __ALLOC_INIT_DATA(byte, data_size + 4);
+  byte* dest  = __ALLOC_DATA     (byte, data_size + 4);
 
   /* Setting a guards, which is 0xdeadcafe.
      The guard should not change or be touched. */
-  __SET_GUARD(ref , SIZE_DATA);
-  __SET_GUARD(dest, SIZE_DATA);
+  __SET_GUARD(ref , data_size);
+  __SET_GUARD(dest, data_size);
 
   /* Generate ref data */
   /* Arguments for the functions */
   args_t args_ref;
 
-  args_ref.size     = SIZE_DATA;
+  args_ref.size     = data_size;
   args_ref.input    = src;
   args_ref.output   = ref;
 
@@ -217,7 +250,7 @@ int main(int argc, char** argv)
   /* Arguments for the function */
   args_t args;
 
-  args.size     = SIZE_DATA;
+  args.size     = data_size;
   args.input    = src;
   args.output   = dest;
 
@@ -231,7 +264,7 @@ int main(int argc, char** argv)
   for (int i = 0; i < num_runs; i++) {
     __SET_START_TIME();
     for (int j = 0; j < 16; j++) {
-      impl_scalar_naive(&args);
+      (*impl)(&args);
     }
     __SET_END_TIME();
     runtimes[i] = __CALC_RUNTIME() / 16;
@@ -240,8 +273,8 @@ int main(int argc, char** argv)
 
   /* Verfication */
   printf("  * Verifying results .... ");
-  bool match = __CHECK_MATCH(ref, dest, SIZE_DATA);
-  bool guard = __CHECK_GUARD(     dest, SIZE_DATA);
+  bool match = __CHECK_MATCH(ref, dest, data_size);
+  bool guard = __CHECK_GUARD(     dest, data_size);
   if (match && guard) {
     printf("Success\n");
   } else if (!match && guard) {
