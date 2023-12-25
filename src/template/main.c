@@ -74,8 +74,8 @@ int main(int argc, char** argv)
   /* Function pointers */
   void* (*impl_scalar_naive_ptr)(void* args) = impl_scalar_naive;
   void* (*impl_scalar_opt_ptr  )(void* args) = impl_scalar_opt;
-  void* (*impl_vector          )(void* args) = impl_vector;
-  void* (*impl_parallel        )(void* args) = impl_parallel;
+  void* (*impl_vector_ptr      )(void* args) = impl_vector;
+  void* (*impl_parallel_ptr    )(void* args) = impl_parallel;
 
   /* Chosen */
   void* (*impl)(void* args) = NULL;
@@ -87,15 +87,15 @@ int main(int argc, char** argv)
     if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--impl") == 0) {
       assert (++i < argc);
       if (strcmp(argv[i], "naive") == 0) {
-        impl = impl_scalar_naive; impl_str = "scalar_naive";
+        impl = impl_scalar_naive_ptr; impl_str = "scalar_naive";
       } else if (strcmp(argv[i], "opt"  ) == 0) {
-        impl = impl_scalar_opt  ; impl_str = "scalar_opt"  ;
+        impl = impl_scalar_opt_ptr  ; impl_str = "scalar_opt"  ;
       } else if (strcmp(argv[i], "vec"  ) == 0) {
-        impl = impl_vector      ; impl_str = "vectorized"  ;
+        impl = impl_vector_ptr      ; impl_str = "vectorized"  ;
       } else if (strcmp(argv[i], "para" ) == 0) {
-        impl = impl_parallel    ; impl_str = "parallelized";
+        impl = impl_parallel_ptr    ; impl_str = "parallelized";
       } else {
-        impl = NULL             ; impl_str = "unknown"     ;
+        impl = NULL                 ; impl_str = "unknown"     ;
       }
 
       continue;
@@ -149,8 +149,13 @@ int main(int argc, char** argv)
 
   if (help || impl == NULL) {
     if (!help) {
-      printf("\n");
-      printf("ERROR: No implementation was chosen.\n");
+      if (impl_str != NULL) {
+        printf("\n");
+        printf("ERROR: Unknown \"%s\" implementation.\n", impl_str);
+      } else {
+        printf("\n");
+        printf("ERROR: No implementation was chosen.\n");
+      }
     }
     printf("\n");
     printf("Usage:\n");
