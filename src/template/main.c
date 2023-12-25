@@ -46,6 +46,8 @@
 #include "impl/ref.h"
 #include "impl/naive.h"
 #include "impl/opt.h"
+#include "impl/vec.h"
+#include "impl/para.h"
 
 /* Include common headers */
 #include "common/types.h"
