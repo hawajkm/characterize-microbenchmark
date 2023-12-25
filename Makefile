@@ -1,44 +1,37 @@
+# Directory
+ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+
+# Compilation Configuratoin
 CC:=gcc
 IFLAGS:=-lm
 CFLAGS:=-O3
 
-# Output name
-BIN := main
-
 # File and directory names
-BUILD_DIR := build
-SRC_DIR := src
+BUILD_DIR := $(ROOT_DIR)/build
+SRC_DIR := $(ROOT_DIR)/src
 
-# Object files
-C_FILES := $(shell find $(SRC_DIR) -name "*.c")
-O_FILES := $(foreach x,$(C_FILES),$(patsubst $(SRC_DIR)/%,$(BUILD_DIR)/%,$(x)))
-O_FILES := $(foreach x,$(O_FILES),$(patsubst %.c,%.o,$(x)))
-D_FILES := $(O_FILES:%.o=%.d)
+# Get all possible benchmarks
+BENCHMARKS := $(notdir $(shell dirname $(shell find $(SRC_DIR)/ -mindepth 2 -maxdepth 2 -name "Makefile.mk")))
+
+# Output
+BINS_BM  := $(addprefix $(BUILD_DIR)/,$(BENCHMARKS))
+CLEAN_BM := $(addprefix clean_,$(BENCHMARKS))
 
 # Default
-all: $(BUILD_DIR)/$(BIN)
+all: $(BINS_BM)
 
--include $(D_FILES)
+# Build directory
+$(BUILD_DIR):
+	mkdir -p $@
 
-# Include directories
-INCLUDE_DIR:=$(SRC_DIR) $(BUILD_DIR) $(BUILD_DIR)/gen
+# Clean
+clean: $(CLEAN_BM)
+	rm -rf $(BUILD_DIR)
 
-# Generate include directory argument
-INCLUDES:=$(foreach x,$(INCLUDE_DIR),$(addprefix -I,$(x)))
+# Template
+include template.mk
 
-$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
-	mkdir -p $(dir $@)
-	$(CC) $(INCLUDES) $(CFLAGS) -MMD -c $< -o $@
-
-$(BUILD_DIR)/$(BIN): $(O_FILES) | build
-	$(CC) $(O_FILES) $(IFLAGS) -o $@
-
-build:
-	mkdir -p build
-
-clean:
-	rm -f $(O_FILES)
-	rm -f $(D_FILES)
-	rm -f $(BUILD_DIR)/$(BIN)
+# All benchmarks/applications
+-include $(SRC_DIR)/Makefile.mk
 
 .PHONY: clean all
