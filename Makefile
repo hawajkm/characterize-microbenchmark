@@ -4,7 +4,7 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 # Compilation Configuratoin
 CC:=gcc
 IFLAGS:=-lm
-CFLAGS:=-O3
+CFLAGS:=-mavx -mavx2 -O3
 
 # File and directory names
 BUILD_DIR := $(ROOT_DIR)/build
