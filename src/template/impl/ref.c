@@ -9,9 +9,12 @@
 /* Standard C includes */
 #include <stdlib.h>
 
-/* Include all required headers */
+/* Include common headers */
 #include "common/macros.h"
 #include "common/types.h"
+
+/* Include application-specific headers */
+#include "include/types.h"
 
 /* Reference Implementation */
 void* impl_ref(void* args)

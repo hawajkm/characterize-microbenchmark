@@ -9,9 +9,12 @@
 /* Standard C includes */
 #include <stdlib.h>
 
-/* Include all required headers */
+/* Include common headers */
 #include "common/macros.h"
 #include "common/types.h"
+
+/* Include application-specific headers */
+#include "include/types.h"
 
 /* Naive Implementation */
 #pragma GCC push_options

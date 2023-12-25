@@ -47,9 +47,12 @@
 #include "impl/naive.h"
 #include "impl/opt.h"
 
-/* Include macros.h */
+/* Include common headers */
 #include "common/types.h"
 #include "common/macros.h"
+
+/* Include application-specific headers */
+#include "include/types.h"
 
 const int SIZE_DATA = 4 * 1024 * 1024;
 

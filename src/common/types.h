@@ -11,14 +11,4 @@
 
 typedef unsigned char byte;
 
-typedef struct {
-  byte*   input;
-  byte*   output;
-
-  size_t size;
-
-  int     cpu;
-  int     nthreads;
-} args_t;
-
 #endif //__COMMON_TYPES_H_
