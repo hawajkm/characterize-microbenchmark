@@ -6,9 +6,13 @@
  *  Description
  */
 
+#define _GNU_SOURCE
+
 /* Standard C includes */
 #include <stdlib.h>
 #include <pthread.h>
+#include <sched.h>
+#include <assert.h>
 
 /* Include common headers */
 #include "common/macros.h"
@@ -46,24 +50,49 @@ void* impl_parallel(void* args)
   register const int*   src1 = (const int*)(p_args->input1);
   register       size_t size =              p_args->size / 4;
 
-  register       size_t nthreads = p_args->nthreads;
+  register       size_t nthreads = p_args->nthreads - 1;
   register       size_t cpu      = p_args->cpu;
 
   /* Create all threads */
-  pthread_t th[nthreads];
-  args_t    th_args[nthreads];
+  pthread_t tid[nthreads];
+  args_t    targs[nthreads];
+  cpu_set_t cpuset[nthreads];
 
-  for (int i = 0; i < nthreads; i++) {
+  /* Assign current CPU to us */
+  tid[0] = pthread_self();
+
+  /* Affinity */
+  CPU_ZERO(&(cpuset[0]));
+  CPU_SET(cpu, &(cpuset[0]));
+
+  /* Set affinity */
+  int res_affinity_0 = pthread_setaffinity_np(tid[0], sizeof(cpuset[0]), &(cpuset[0]));
+
+  /* Amount of work per thread */
+  size_t size_per_thread = size / nthreads;
+
+  for (int i = 1; i < nthreads; i++) {
     /* Initialize the argument structure */
-    th_args[i].size     = size / nthreads;
-    th_args[i].input0   = (byte*)(src0 + (i * (size / nthreads)));
-    th_args[i].input1   = (byte*)(src1 + (i * (size / nthreads)));
-    th_args[i].output   = (byte*)(dest + (i * (size / nthreads)));
+    targs[i].size     = size_per_thread;
+    targs[i].input0   = (byte*)(src0 + (i * size_per_thread));
+    targs[i].input1   = (byte*)(src1 + (i * size_per_thread));
+    targs[i].output   = (byte*)(dest + (i * size_per_thread));
 
-    th_args[i].cpu      = (cpu + i) % nthreads;
-    th_args[i].nthreads = nthreads;
+    targs[i].cpu      = (cpu + i) % nthreads;
+    targs[i].nthreads = nthreads;
 
-    int res = pthread_create(&th[i], NULL, worker, (void*)&th_args[i]);
+    /* Affinity */
+    CPU_ZERO(&(cpuset[i]));
+    CPU_SET(targs[i].cpu, &(cpuset[i]));
+
+    /* Set affinity */
+    int res = pthread_create(&tid[i], NULL, worker, (void*)&targs[i]);
+    int res_affinity = pthread_setaffinity_np(tid[i], sizeof(cpuset[i]), &(cpuset[i]));
+  }
+
+  /* Perform one portion of the work */
+  for (int i = 0; i < size_per_thread; i++) {
+    dest[i] = src0[i] + src1[i];
   }
 
   /* Perform trailing elements */
@@ -74,7 +103,7 @@ void* impl_parallel(void* args)
 
   /* Wait for all threads to finish execution */
   for (int i = 0; i < nthreads; i++) {
-    pthread_join(th[i], NULL);
+    pthread_join(tid[i], NULL);
   }
 
   /* Done */
