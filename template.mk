@@ -27,7 +27,7 @@ $$($(1)_BUILD_DIR)/%.o: $$($(1)_DIR)/%.c | $$($(1)_BUILD_DIR)
 $$(BUILD_DIR)/$$($(1)_BIN): $$($(1)_O_FILES) | $$($(1)_BUILD_DIR)
 	$$(CC) $$($(1)_O_FILES) $$(IFLAGS) -o $$@
 
-$$($(1)_BUILD_DIR): $$(BUILD_DIR)
+$$($(1)_BUILD_DIR): | $$(BUILD_DIR)
 	mkdir -p $$@
 
 $(1): $$(BUILD_DIR)/$$($(1)_BIN)
