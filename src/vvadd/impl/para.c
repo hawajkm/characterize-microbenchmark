@@ -26,7 +26,7 @@ void* worker(void* args) {
   register       int*   dest = (      int*)(p_args->output);
   register const int*   src0 = (const int*)(p_args->input0);
   register const int*   src1 = (const int*)(p_args->input1);
-  register       size_t size =              p_args->size / 4;
+  register       size_t size =              p_args->size;
 
   for (int i = 0; i < size; i++) {
     dest[i] = src0[i] + src1[i];
