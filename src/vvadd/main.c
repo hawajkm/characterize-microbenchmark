@@ -210,7 +210,7 @@ int main(int argc, char** argv)
 
   CPU_ZERO(&cpumask);
   for (int i = 0; i < nthreads; i++) {
-    CPU_SET(cpu + i, &cpumask);
+    CPU_SET((cpu + i) % nthreads, &cpumask);
   }
 
   res = sched_setaffinity(pid, sizeof(cpumask), &cpumask);
