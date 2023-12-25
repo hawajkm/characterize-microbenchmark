@@ -72,7 +72,7 @@ int main(int argc, char** argv)
 
   bool help = false;
   for (int i = 1; i < argc; i++) {
-    if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "-impl") == 0) {
+    if (strcmp(argv[i], "-i") == 0 || strcmp(argv[i], "--impl") == 0) {
       assert (++i < argc);
       if (strcmp(argv[i], "naive") == 0) {
         impl = impl_scalar_naive; impl_str = "scalar_naive";
@@ -119,13 +119,15 @@ int main(int argc, char** argv)
     }
     printf("\n");
     printf("Usage:\n");
-    printf("  %s -impl i [-nthreads n]\n", argv[0]);
-    printf("\n");
-    printf("Options:\n");
-    printf("  -h | --help      Print this message.\n");
-    printf("  -i | --impl      Available implementations = {naive, opt, vec, para}.\n");
-    printf("  -n | --nthreads  Set number of threads available. Default = %d\n", nthreads);
-    printf("  -c | --cpu       Set the main CPU for the program. Default = %d\n", cpu);
+    printf("  %s {-i | --impl} impl_str [Options]\n", argv[0]);
+    printf("  \n");
+    printf("  Required:\n");
+    printf("    -i | --impl      Available implementations = {naive, opt, vec, para}\n");
+    printf("    \n");
+    printf("  Options:\n");
+    printf("    -h | --help      Print this message\n");
+    printf("    -n | --nthreads  Set number of threads available (default = %d)\n", nthreads);
+    printf("    -c | --cpu       Set the main CPU for the program (default = %d)\n", cpu);
     printf("\n");
 
     exit(help? 0 : 1);
