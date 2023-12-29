@@ -17,8 +17,8 @@
 
 /* Testing and Statistics Macros */
 #define __ALLOC_DATA(type, nelems) ({                  \
-  type* temp = (type*)aligned_alloc(512 / 8,           \
-                              nelems * sizeof(type));  \
+  unsigned int nbytes = (nelems) * sizeof(type);       \
+  type* temp = (type*)aligned_alloc(512 / 8, nbytes);  \
                                                        \
   if (temp == NULL) {                                  \
     printf("\n");                                      \
@@ -32,8 +32,8 @@
 })
 
 #define __ALLOC_INIT_DATA(type, nelems) ({             \
-  type* temp = (type*)aligned_alloc(512 / 8,           \
-                              nelems * sizeof(type));  \
+  unsigned int nbytes = (nelems) * sizeof(type);       \
+  type* temp = (type*)aligned_alloc(512 / 8, nbytes);  \
                                                        \
   if (temp == NULL) {                                  \
     printf("\n");                                      \
@@ -51,10 +51,10 @@
 })
 
 #define __SET_GUARD(array, sz) {                       \
-  array[sz + 0] = 0xfe;                                \
-  array[sz + 1] = 0xca;                                \
-  array[sz + 2] = 0xad;                                \
-  array[sz + 3] = 0xde;                                \
+  ((byte*)array)[sz + 0] = 0xfe;                       \
+  ((byte*)array)[sz + 1] = 0xca;                       \
+  ((byte*)array)[sz + 2] = 0xad;                       \
+  ((byte*)array)[sz + 3] = 0xde;                       \
 }
 
 #define __CHECK_MATCH(ref, array, sz) ({               \
@@ -67,13 +67,23 @@
   __tmp;                                               \
 })
 
+#define __CHECK_FLOAT_MATCH(ref, array, sz, delta) ({  \
+  bool __tmp = true;                                   \
+                                                       \
+  for(int i = 0; (i < sz) && __tmp; i++) {             \
+    __tmp = __tmp && (fabs(ref[i] - array[i]) < delta);\
+  }                                                    \
+                                                       \
+  __tmp;                                               \
+})
+
 #define __CHECK_GUARD(array, sz) ({                    \
   bool match = true;                                   \
                                                        \
-  match = match && (array[sz + 0] == 0xfe);            \
-  match = match && (array[sz + 1] == 0xca);            \
-  match = match && (array[sz + 2] == 0xad);            \
-  match = match && (array[sz + 3] == 0xde);            \
+  match = match && (((byte*)array)[sz + 0] == 0xfe);   \
+  match = match && (((byte*)array)[sz + 1] == 0xca);   \
+  match = match && (((byte*)array)[sz + 2] == 0xad);   \
+  match = match && (((byte*)array)[sz + 3] == 0xde);   \
                                                        \
   match;                                               \
 })
