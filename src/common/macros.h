@@ -13,7 +13,7 @@
 #define __COMPILER_FENCE_ __asm__ __volatile__ ("" : : : "memory");
 
 /* Specific */
-#define __PRINT_MATCH(x) (x ? "   MATCH" : "NO MATCH")
+#define __PRINT_MATCH(x) (x ? "MATCHING" : "MISMATCH")
 
 /* Testing and Statistics Macros */
 #define __ALLOC_DATA(type, nelems) ({                  \
