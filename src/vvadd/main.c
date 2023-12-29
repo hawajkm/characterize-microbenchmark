@@ -104,7 +104,7 @@ int main(int argc, char** argv)
     /* Input/output data size */
     if (strcmp(argv[i], "-s") == 0 || strcmp(argv[i], "--size") == 0) {
       assert (++i < argc);
-      data_size = atoi(argv[i]);
+      data_size = atoi(argv[i]) * sizeof(int);
 
       continue;
     }
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
     printf("    -h | --help      Print this message\n");
     printf("    -n | --nthreads  Set number of threads available (default = %d)\n", nthreads);
     printf("    -c | --cpu       Set the main CPU for the program (default = %d)\n", cpu);
-    printf("    -s | --size      Size of input and output data (default = %d)\n", data_size);
+    printf("    -s | --size      Size of input and output data (default = %d)\n", data_size / sizeof(int));
     printf("         --nruns     Number of runs to the implementation (default = %d)\n", nruns);
     printf("         --stdevs    Number of standard deviation to exclude outliers (default = %d)\n", nstdevs);
     printf("\n");
