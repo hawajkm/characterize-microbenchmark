@@ -60,6 +60,9 @@ const int SIZE_DATA = 4 * 1024 * 1024;
 
 int main(int argc, char** argv)
 {
+  /* Set the buffer for printf to NULL */
+  setbuf(stdout, NULL);
+
   /* Arguments */
   int nthreads = 1;
   int cpu      = 0;
@@ -268,7 +271,7 @@ int main(int argc, char** argv)
   args.nthreads = nthreads;
 
   /* Start execution */
-  printf("Running Scalar \"%s\" implementation:\n", impl_str);
+  printf("Running \"%s\" implementation:\n", impl_str);
 
   printf("  * Invoking the implementation %d times .... ", num_runs);
   for (int i = 0; i < num_runs; i++) {
@@ -370,32 +373,44 @@ int main(int argc, char** argv)
     printf("      - Number of masked-off = %d\n", n_msked);
   } while (n_msked > 0);
   /* Display information */
-  printf("  * Runtimes (%s): "  , __PRINT_MATCH(match));
-  printf(" %" PRIu64 " ns\n", avg                 );
-  printf("\n");
+  printf("  * Runtimes (%s): ", __PRINT_MATCH(match));
+  printf(" %" PRIu64 " ns\n"  , avg                 );
 
   /* Dump */
+  printf("  * Dumping runtime informations:\n");
   FILE * fp;
   char filename[256];
   strcpy(filename, impl_str);
   strcat(filename, "_runtimes.csv");
+  printf("    - Filename: %s\n", filename);
+  printf("    - Opening file .... ");
   fp = fopen(filename, "w");
 
-  fprintf(fp, "impl,%s", impl_str);
+  if (fp != NULL) {
+    printf("Succeeded\n");
+    printf("    - Writing runtimes ... ");
+    fprintf(fp, "impl,%s", impl_str);
 
-  fprintf(fp, "\n");
-  fprintf(fp, "num_of_runs,%d", num_runs);
+    fprintf(fp, "\n");
+    fprintf(fp, "num_of_runs,%d", num_runs);
 
-  fprintf(fp, "\n");
-  fprintf(fp, "runtimes");
-  for (int i = 0; i < num_runs; i++) {
-    fprintf(fp, ", ");
-    fprintf(fp, "%d", runtimes[i]);
+    fprintf(fp, "\n");
+    fprintf(fp, "runtimes");
+    for (int i = 0; i < num_runs; i++) {
+      fprintf(fp, ", ");
+      fprintf(fp, "%d", runtimes[i]);
+    }
+
+    fprintf(fp, "\n");
+    fprintf(fp, "avg,%" PRIu64 "", avg);
+    printf("Finished\n");
+    printf("    - Closing file handle .... ");
+    fclose(fp);
+    printf("Finished\n");
+  } else {
+    printf("Failed\n");
   }
-
-  fprintf(fp, "\n");
-  fprintf(fp, "avg,%" PRIu64 "", avg);
-  fclose(fp);
+  printf("\n");
 
   /* Manage memory */
   free(src0);
