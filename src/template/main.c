@@ -265,7 +265,7 @@ int main(int argc, char** argv)
   args.nthreads = nthreads;
 
   /* Start execution */
-  printf("Running Scalar \"%s\" implementation:\n", impl_str);
+  printf("Running \"%s\" implementation:\n", impl_str);
 
   printf("  * Invoking the implementation %d times .... ", num_runs);
   for (int i = 0; i < num_runs; i++) {
