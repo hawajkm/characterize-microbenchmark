@@ -19,9 +19,6 @@
 #include "include/types.h"
 
 /* Alternative Implementation */
-#pragma GCC push_options
-#pragma GCC optimize ("O1")
-__attribute__ ((optimize(1)))
 void* impl_vector(void* args)
 {
   /* Get the argument struct */
@@ -60,4 +57,3 @@ void* impl_vector(void* args)
     dest += hw_vlen;                                  /* -/                */
   }
 }
-#pragma GCC pop_options
