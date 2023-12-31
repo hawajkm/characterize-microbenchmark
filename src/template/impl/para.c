@@ -24,4 +24,5 @@
 /* Alternative Implementation */
 void* impl_parallel(void* args)
 {
+  return NULL;
 }

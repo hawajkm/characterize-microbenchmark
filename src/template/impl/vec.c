@@ -21,5 +21,6 @@
 #pragma GCC optimize ("O1")
 void* impl_vector(void* args)
 {
+  return NULL;
 }
 #pragma GCC pop_options

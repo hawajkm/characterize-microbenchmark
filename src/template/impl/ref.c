@@ -19,4 +19,5 @@
 /* Reference Implementation */
 void* impl_ref(void* args)
 {
+  return NULL;
 }
