@@ -34,4 +34,7 @@ void* impl_ref(void* args)
   for (register int i = 0; i < size; i++) {
     dest[i] = src0[i] + src1[i];
   }
+
+  /* Done */
+  return NULL;
 }

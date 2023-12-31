@@ -89,25 +89,28 @@ void* impl_parallel(void* args)
     if (i == 0) {
       tid[i] = pthread_self();
     } else {
-      int res = pthread_create(&tid[i], NULL, worker, (void*)&targs[i]);
+      int __attribute__((unused)) res = \
+                         pthread_create(&tid[i], NULL, worker, (void*)&targs[i]);
     }
 
-    int res_affinity = pthread_setaffinity_np(tid[i],
+    int __attribute__((unused)) res_affinity = pthread_setaffinity_np(tid[i],
                                                 sizeof(cpuset[i]), &(cpuset[i]));
   }
 
-  /* Perform one portion of the work */
-  for (int i = 0; i < targs[0].size; i++) {
-    ((int*)targs[0].output)[i] =                            \
-                        ((const int*)targs[0].input0)[i] +  \
-                            ((const int*)targs[0].input1)[i];
-  }
+  if (nthreads > 0) {
+    /* Perform one portion of the work */
+    for (int i = 0; i < targs[0].size; i++) {
+      ((int*)targs[0].output)[i] =                            \
+                          ((const int*)targs[0].input0)[i] +  \
+                              ((const int*)targs[0].input1)[i];
+    }
 
-  /* Perform trailing elements */
-  for (int i = size - remaining; i < size; i++) {
-    ((int*)targs[0].output)[i] =                            \
-                        ((const int*)targs[0].input0)[i] +  \
-                            ((const int*)targs[0].input1)[i];
+    /* Perform trailing elements */
+    for (int i = size - remaining; i < size; i++) {
+      ((int*)targs[0].output)[i] =                            \
+                          ((const int*)targs[0].input0)[i] +  \
+                              ((const int*)targs[0].input1)[i];
+    }
   }
 
   /* Wait for all threads to finish execution */
@@ -116,5 +119,5 @@ void* impl_parallel(void* args)
   }
 
   /* Done */
-  return 0;
+  return NULL;
 }

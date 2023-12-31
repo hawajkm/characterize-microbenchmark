@@ -63,6 +63,9 @@ void* impl_vector(void* args)
     src1 += hw_vlen;                                  /*   |-> ptr arith   */
     dest += hw_vlen;                                  /* -/                */
   }
+
+  /* Done */
+  return NULL;
 #elif defined(__aarch__) || defined(__aarch64__) || defined(__arm64__)
 #endif
 }

@@ -20,7 +20,7 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O1")
 __attribute__ ((optimize(1)))
-void impl_scalar_opt(void* args)
+void* impl_scalar_opt(void* args)
 {
   /* Get the argument struct */
   args_t* parsed_args = (args_t*)args;
@@ -32,7 +32,6 @@ void impl_scalar_opt(void* args)
   register       size_t size =              parsed_args->size / 4;
 
   register       size_t sz_8 = size / 8;
-  register int i = 0;
 
   switch (size % 8) {
     case 7:  *(dest++) = *(src0++) + *(src1++);
@@ -62,5 +61,8 @@ void impl_scalar_opt(void* args)
 
     --sz_8;
   }
+
+  /* Done */
+  return NULL;
 }
 #pragma GCC pop_options

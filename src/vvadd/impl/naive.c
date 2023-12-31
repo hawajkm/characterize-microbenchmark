@@ -20,7 +20,7 @@
 #pragma GCC push_options
 #pragma GCC optimize ("O1")
 __attribute__ ((optimize(1)))
-void impl_scalar_naive(void* args)
+void* impl_scalar_naive(void* args)
 {
   /* Get the argument struct */
   args_t* parsed_args = (args_t*)args;
@@ -34,5 +34,8 @@ void impl_scalar_naive(void* args)
   for (register int i = 0; i < size; i++) {
     dest[i] = src0[i] + src1[i];
   }
+
+  /* Done */
+  return NULL;
 }
 #pragma GCC pop_options
