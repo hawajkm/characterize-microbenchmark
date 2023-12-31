@@ -16,6 +16,7 @@
 #define __PRINT_MATCH(x) (x ? "MATCHING" : "MISMATCH")
 
 /* Testing and Statistics Macros */
+#ifndef __APPLE__
 #define __ALLOC_DATA(type, nelems) ({                  \
   unsigned int nbytes = (nelems) * sizeof(type);       \
   type* temp = (type*)aligned_alloc(512 / 8, nbytes);  \
@@ -30,7 +31,25 @@
                                                        \
   temp;                                                \
 })
+#else
+#define __ALLOC_DATA(type, nelems) ({                  \
+  unsigned int nbytes = (nelems) * sizeof(type);       \
+  nbytes = ((nbytes + 63) / 64) * 64;                  \
+  type* temp = (type*)aligned_alloc(512 / 8, nbytes);  \
+                                                       \
+  if (temp == NULL) {                                  \
+    printf("\n");                                      \
+    printf("  ERROR: Cannot allocate memory!");        \
+    printf("\n");                                      \
+    printf("\n");                                      \
+    exit(-2);                                          \
+  }                                                    \
+                                                       \
+  temp;                                                \
+})
+#endif
 
+#ifndef __APPLE__
 #define __ALLOC_INIT_DATA(type, nelems) ({             \
   unsigned int nbytes = (nelems) * sizeof(type);       \
   type* temp = (type*)aligned_alloc(512 / 8, nbytes);  \
@@ -49,6 +68,27 @@
   }                                                    \
   temp;                                                \
 })
+#else
+#define __ALLOC_INIT_DATA(type, nelems) ({             \
+  unsigned int nbytes = (nelems) * sizeof(type);       \
+  nbytes = ((nbytes + 63) / 64) * 64;                  \
+  type* temp = (type*)aligned_alloc(512 / 8, nbytes);  \
+                                                       \
+  if (temp == NULL) {                                  \
+    printf("\n");                                      \
+    printf("  ERROR: Cannot allocate memory!");        \
+    printf("\n");                                      \
+    printf("\n");                                      \
+    exit(-2);                                          \
+  }                                                    \
+                                                       \
+  /* Generate data */                                  \
+  for(int i = 0; i < nelems; i++) {                    \
+    temp[i] = rand() % (0x1llu << (sizeof(type) * 8)); \
+  }                                                    \
+  temp;                                                \
+})
+#endif
 
 #define __SET_GUARD(array, sz) {                       \
   ((byte*)array)[sz + 0] = 0xfe;                       \
