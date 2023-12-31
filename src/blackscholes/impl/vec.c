@@ -19,4 +19,5 @@
 /* Alternative Implementation */
 void* impl_vector(void* args)
 {
+  return NULL;
 }

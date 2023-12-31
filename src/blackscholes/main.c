@@ -213,7 +213,7 @@ int main(int argc, char** argv)
   do {
     errno = 0;
     printf("      -> trying niceness level = %d\n", nice_level);
-    int ret = nice(nice_level);
+    int __attribute__((unused)) ret = nice(nice_level);
   } while (errno != 0 && nice_level++);
 
   printf("    + Process has niceness level = %d\n", nice_level);
@@ -308,7 +308,7 @@ int main(int argc, char** argv)
   args_ref.nthreads   = nthreads    ;
 
   /* Call genDataset to generate dataset and reference output */
-  printf("  * Invoking genDataset .... ", num_runs);
+  printf("  * Invoking genDataset .... ");
   genDataset(&args_ref);
   printf("Finished\n");
   printf("\n");
@@ -431,7 +431,7 @@ int main(int argc, char** argv)
 
     printf("      - Standard deviation = %" PRIu64 "\n", std);
     printf("      - Average = %" PRIu64 "\n", avg);
-    printf("      - Number of active elements = %d\n", avg_n);
+    printf("      - Number of active elements = %" PRIu64 "\n", avg_n);
     printf("      - Number of masked-off = %d\n", n_msked);
   } while (n_msked > 0);
   /* Display information */
@@ -460,7 +460,7 @@ int main(int argc, char** argv)
     fprintf(fp, "runtimes");
     for (int i = 0; i < num_runs; i++) {
       fprintf(fp, ", ");
-      fprintf(fp, "%d", runtimes[i]);
+      fprintf(fp, "%" PRIu64 "", runtimes[i]);
     }
 
     fprintf(fp, "\n");

@@ -19,4 +19,5 @@
 /* Naive Implementation */
 void* impl_scalar(void* args)
 {
+  return NULL;
 }
