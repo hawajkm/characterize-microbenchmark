@@ -3,8 +3,8 @@ ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 
 # Compilation Configuratoin
 CC:=gcc
-IFLAGS:=-lm
-CFLAGS:=-mavx -mavx2 -O3
+IFLAGS:=-lpthread -lm
+CFLAGS:=-mavx -mavx2 -g -O3
 
 # File and directory names
 BUILD_DIR := $(ROOT_DIR)/build
