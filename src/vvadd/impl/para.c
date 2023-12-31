@@ -55,7 +55,7 @@ void* impl_parallel(void* args)
   register const int*   src1 = (const int*)(p_args->input1);
   register       size_t size =              p_args->size / 4;
 
-  register       size_t nthreads = p_args->nthreads - 1;
+  register       size_t nthreads = p_args->nthreads;
   register       size_t cpu      = p_args->cpu;
 
   /* Create all threads */
