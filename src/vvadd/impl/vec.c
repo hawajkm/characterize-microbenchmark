@@ -12,7 +12,7 @@
 /*  -> SIMD header file  */
 #if defined(__amd64__) || defined(__x86_64__)
 #include <immintrin.h>
-#elif defined(__AARCH__) || defined(__AARCH64__) || defined(__AARCH32__)
+#elif defined(__aarch__) || defined(__aarch64__) || defined(__arm64__)
 #include <arm_neon.h>
 #endif
 
@@ -63,6 +63,6 @@ void* impl_vector(void* args)
     src1 += hw_vlen;                                  /*   |-> ptr arith   */
     dest += hw_vlen;                                  /* -/                */
   }
-#elif defined(__AARCH__) || defined(__AARCH64__) || defined(__AARCH32__)
+#elif defined(__aarch__) || defined(__aarch64__) || defined(__arm64__)
 #endif
 }
