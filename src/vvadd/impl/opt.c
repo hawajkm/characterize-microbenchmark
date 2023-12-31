@@ -42,7 +42,7 @@ void impl_scalar_opt(void* args)
     case 3:  *(dest++) = *(src0++) + *(src1++);
     case 2:  *(dest++) = *(src0++) + *(src1++);
     case 1:  *(dest++) = *(src0++) + *(src1++);
-    case 0:
+    case 0:  break;
   }
 
 
