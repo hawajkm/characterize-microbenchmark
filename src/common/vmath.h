@@ -9,7 +9,7 @@
 /* SIMD header file  */
 #if defined(__amd64__) || defined(__x86_64__)
 #include <immintrin.h>
-#elif defined(__AARCH__) || defined(__AARCH64__) || defined(__AARCH32__)
+#elif defined(__aarch__) || defined(__aarch64__) || defined(__arm64__)
 #include <arm_neon.h>
 #endif
 
@@ -169,7 +169,7 @@ __m256 _mm256_exp_ps(__m256 x)
   return y;
 }
 
-#elif defined(__AARCH64__) || defined(__AARCH__) || defined(__AARCH32__)
+#elif defined(__aarch__) || defined(__aarch64__) || defined(__arm64__)
 
 /* ********************************************** *
  * Based on the ARM NEON implementation of log_ps *
@@ -279,7 +279,7 @@ float32x4_t vexp_f32(float32x4_t x)
   x = vsubq_f32(x, tmp);
   x = vsubq_f32(x, z);
 
-  y = vmulq_f32(x, vdupq_n_f32(1.9875691500e-4f));
+  float32x4_t y = vmulq_f32(x, vdupq_n_f32(1.9875691500e-4f));
   z = vmulq_f32(x, x);
   y = vaddq_f32(y, vdupq_n_f32(1.3981999507e-3f));
   y = vmulq_f32(y, x);
