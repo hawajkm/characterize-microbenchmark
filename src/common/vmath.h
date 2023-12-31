@@ -187,7 +187,7 @@ float32x4_t vlog_f32(float32x4_t x)
   int32x4_t emm0 = vshrq_n_s32(ux, 23);
 
   /* keep only the fractional part */
-  ux = vandq_s32(ux, vdupq_n_s32(c_inv_mant_mask));
+  ux = vandq_s32(ux, vdupq_n_s32(~0x7f800000u));
   ux = vorrq_s32(ux, vreinterpretq_s32_f32(vdupq_n_f32(0.5f)));
   x = vreinterpretq_f32_s32(ux);
 
@@ -202,7 +202,7 @@ float32x4_t vlog_f32(float32x4_t x)
        x = x + x - 1.0;
      } else { x = x - 1.0; }
   */
-  uint32x4_t mask = vcltq_f32(x, vdupq_n_f32(c_cephes_SQRTHF));
+  uint32x4_t mask = vcltq_f32(x, vdupq_n_f32(0.707106781186547524f));
   float32x4_t tmp = vreinterpretq_f32_u32(vandq_u32(vreinterpretq_u32_f32(x), mask));
   x = vsubq_f32(x, vdupq_n_f32(1));
   uint32x4_t ones_bin = vreinterpretq_u32_f32(vdupq_n_f32(1));
@@ -241,7 +241,7 @@ float32x4_t vlog_f32(float32x4_t x)
   tmp = vmulq_f32(e, vdupq_n_f32(0.693359375f));
   x = vaddq_f32(x, y);
   x = vaddq_f32(x, tmp);
-  uin32x4_t nans = vreinterpretq_u32_f32(x);
+  uint32x4_t nans = vreinterpretq_u32_f32(x);
   nans = vorrq_u32(nans, invalid_mask); /* Negative inputs will be NAN */
   x = vreinterpretq_f32_u32(nans);
 
