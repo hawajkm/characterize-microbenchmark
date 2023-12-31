@@ -8,12 +8,18 @@
 
 /* Standard C includes  */
 #include <stdlib.h>
-/*  -> AVX header file  */
+#include <math.h>
+/*  -> SIMD header file  */
+#if defined(__amd64__) || defined(__x86_64__)
 #include <immintrin.h>
+#elif defined(__AARCH__) || defined(__AARCH64__) || defined(__AARCH32__)
+#include <arm_neon.h>
+#endif
 
 /* Include common headers */
 #include "common/macros.h"
 #include "common/types.h"
+#include "common/vmath.h"
 
 /* Include application-specific headers */
 #include "include/types.h"
@@ -21,6 +27,7 @@
 /* Alternative Implementation */
 void* impl_vector(void* args)
 {
+#if defined(__amd64__) || defined(__x86_64__)
   /* Get the argument struct */
   args_t* parsed_args = (args_t*)args;
 
@@ -56,4 +63,6 @@ void* impl_vector(void* args)
     src1 += hw_vlen;                                  /*   |-> ptr arith   */
     dest += hw_vlen;                                  /* -/                */
   }
+#elif defined(__AARCH__) || defined(__AARCH64__) || defined(__AARCH32__)
+#endif
 }
