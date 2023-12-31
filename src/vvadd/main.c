@@ -192,6 +192,12 @@ int main(int argc, char** argv)
 
   printf("    + Process has niceness level = %d\n", nice_level);
 
+  /* If we are on an apple operating system, skip the scheduling  *
+   * routine; Darwin does not support sched_set* system calls ... *
+   *                                                              *
+   * hawajkm: and here I was--thinking that MacOS is POSIX ...    *
+   *          Silly me!                                           */
+#if !defined(__APPLE__)
   /* Set scheduling to reduce context switching */
   /*    -> Set scheduling scheme                */
   printf("  * Setting up FIFO scheduling scheme and high priority ... ");
@@ -223,6 +229,7 @@ int main(int argc, char** argv)
   } else {
     printf("Succeeded\n");
   }
+#endif
   printf("\n");
 
   /* Statistics */
