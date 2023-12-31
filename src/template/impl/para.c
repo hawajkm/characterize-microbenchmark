@@ -13,13 +13,15 @@
 #include "common/macros.h"
 #include "common/types.h"
 
+/* If we are on Darwin, include the compatibility header */
+#if defined(__APPLE__)
+#include "common/mach_pthread_compatibility.h"
+#endif
+
 /* Include application-specific headers */
 #include "include/types.h"
 
 /* Alternative Implementation */
-#pragma GCC push_options
-#pragma GCC optimize ("O1")
 void* impl_parallel(void* args)
 {
 }
-#pragma GCC pop_options
