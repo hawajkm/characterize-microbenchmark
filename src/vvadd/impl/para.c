@@ -63,25 +63,20 @@ void* impl_parallel(void* args)
   args_t    targs[nthreads];
   cpu_set_t cpuset[nthreads];
 
-  /* Assign current CPU to us */
-  tid[0] = pthread_self();
-
-  /* Affinity */
-  CPU_ZERO(&(cpuset[0]));
-  CPU_SET(cpu, &(cpuset[0]));
-
-  /* Set affinity */
-  int res_affinity_0 = pthread_setaffinity_np(tid[0], sizeof(cpuset[0]), &(cpuset[0]));
-
   /* Amount of work per thread */
   size_t size_per_thread = size / nthreads;
+  size_t remaining = size % nthreads;
 
-  for (int i = 1; i < nthreads; i++) {
+  for (int i = 0; i < nthreads; i++) {
     /* Initialize the argument structure */
     targs[i].size     = size_per_thread;
-    targs[i].input0   = (byte*)(src0 + (i * size_per_thread));
-    targs[i].input1   = (byte*)(src1 + (i * size_per_thread));
-    targs[i].output   = (byte*)(dest + (i * size_per_thread));
+    targs[i].output   = (byte*)dest;
+    targs[i].input0   = (byte*)src0;
+    targs[i].input1   = (byte*)src1;
+
+    dest += targs[i].size;
+    src0 += targs[i].size;
+    src1 += targs[i].size;
 
     targs[i].cpu      = (cpu + i) % nthreads;
     targs[i].nthreads = nthreads;
@@ -91,19 +86,28 @@ void* impl_parallel(void* args)
     CPU_SET(targs[i].cpu, &(cpuset[i]));
 
     /* Set affinity */
-    int res = pthread_create(&tid[i], NULL, worker, (void*)&targs[i]);
-    int res_affinity = pthread_setaffinity_np(tid[i], sizeof(cpuset[i]), &(cpuset[i]));
+    if (i == 0) {
+      tid[i] = pthread_self();
+    } else {
+      int res = pthread_create(&tid[i], NULL, worker, (void*)&targs[i]);
+    }
+
+    int res_affinity = pthread_setaffinity_np(tid[i],
+                                                sizeof(cpuset[i]), &(cpuset[i]));
   }
 
   /* Perform one portion of the work */
-  for (int i = 0; i < size_per_thread; i++) {
-    dest[i] = src0[i] + src1[i];
+  for (int i = 0; i < targs[0].size; i++) {
+    ((int*)targs[0].output)[i] =                            \
+                        ((const int*)targs[0].input0)[i] +  \
+                            ((const int*)targs[0].input1)[i];
   }
 
   /* Perform trailing elements */
-  int remaining = size % nthreads;
   for (int i = size - remaining; i < size; i++) {
-    dest[i] = src0[i] + src1[i];
+    ((int*)targs[0].output)[i] =                            \
+                        ((const int*)targs[0].input0)[i] +  \
+                            ((const int*)targs[0].input1)[i];
   }
 
   /* Wait for all threads to finish execution */
